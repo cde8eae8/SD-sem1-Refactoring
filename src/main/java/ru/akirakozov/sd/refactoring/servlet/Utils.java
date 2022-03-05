@@ -30,4 +30,9 @@ public class Utils {
         }
         return elements;
     }
+
+    static void makePage(HtmlTree.Element page, PrintWriter writer) {
+        HtmlPrinter printer = new HtmlPrinter(writer);
+        page.accept(printer);
+    }
 }

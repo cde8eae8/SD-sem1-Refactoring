@@ -29,11 +29,9 @@ public class GetProductsServlet extends HttpServlet {
         try {
             dataBase.sqlRequest("SELECT * FROM PRODUCT",
                     (ResultSet rs) -> {
-                        Function<List<HtmlTree.Element>, HtmlTree.Element> template =
-                                (List<HtmlTree.Element> el) -> new HtmlTree.Html(List.of(new HtmlTree.Body(el)));
+                        Function<List<HtmlTree.Element>, HtmlTree.Element> template = Utils::page;
                         HtmlTree.Element page = template.apply(htmlTable(rs));
-                        HtmlPrinter printer = new HtmlPrinter(response.getWriter());
-                        page.accept(printer);
+                        Utils.makePage(page, response.getWriter());
                     });
         } catch (SQLException e) {
             throw new RuntimeException(e);

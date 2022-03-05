@@ -34,7 +34,7 @@ public class HtmlPrinter implements HtmlTree.IVisitor {
     @Override
     public void visit(Dir dir, HtmlTree.LineBreak html) {
         if (dir.equals(Dir.In)) {
-            writer.print("</br>");
+            writer.println("</br>");
         }
     }
 
