@@ -4,10 +4,16 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.sql.*;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import static ru.akirakozov.sd.refactoring.servlet.Utils.*;
 
 /**
  * @author akirakozov
@@ -17,87 +23,64 @@ public class QueryServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String command = request.getParameter("command");
 
-        if ("max".equals(command)) {
+        throwableConsumer<String> minMax = (String cmd) -> {
+            String template = makeTemplate((PrintWriter writer) -> {
+                        writer.println("<html><body>");
+                        writer.println(String.format("<h1>Product with %s price: </h1>", cmd));
+                        writer.println("%table%");
+                        writer.println("</body></html>");
+                    });
+
+            sqlRequest(
+                    String.format("SELECT * FROM PRODUCT ORDER BY PRICE %s LIMIT 1",
+                            cmd.equals("max") ? "DESC" : ""),
+                    (ResultSet rs) -> Utils.fromTemplate(template, rs, response.getWriter()));
+        };
+
+        throwableConsumer<String> sum = (String cmd) -> {
+            String template = makeTemplate((PrintWriter writer) -> {
+                writer.println("<html><body>");
+                writer.println("Summary price: ");
+                writer.println("%value%");
+                writer.println("</body></html>");
+            });
+
+            sqlRequest(
+                    "SELECT SUM(price) FROM PRODUCT",
+                    (ResultSet rs) -> Utils.fromTemplate(
+                            template,
+                            rs.next() ? Optional.of(rs.getInt(1)) : Optional.empty(),
+                            response.getWriter()));
+        };
+
+        throwableConsumer<String> count = (String cmd) -> {
+            String template = makeTemplate((PrintWriter writer) -> {
+                writer.println("<html><body>");
+                writer.println("Number of products: ");
+                writer.println("%value%");
+                writer.println("</body></html>");
+            });
+
+            sqlRequest(
+                    "SELECT COUNT(*) FROM PRODUCT",
+                    (ResultSet rs) -> {
+                        Utils.fromTemplate(
+                                template,
+                                rs.next() ? Optional.of(rs.getInt(1)) : Optional.empty(),
+                                response.getWriter());
+                    });
+        };
+
+        Map<String, throwableConsumer<String>> functions = Map.of(
+                "min", minMax,
+                "max", minMax,
+                "sum", sum,
+                "count", count
+        );
+
+        if (functions.containsKey(command)) {
             try {
-                try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-                    Statement stmt = c.createStatement();
-                    ResultSet rs = stmt.executeQuery("SELECT * FROM PRODUCT ORDER BY PRICE DESC LIMIT 1");
-                    response.getWriter().println("<html><body>");
-                    response.getWriter().println("<h1>Product with max price: </h1>");
-
-                    while (rs.next()) {
-                        String  name = rs.getString("name");
-                        int price  = rs.getInt("price");
-                        response.getWriter().println(name + "\t" + price + "</br>");
-                    }
-                    response.getWriter().println("</body></html>");
-
-                    rs.close();
-                    stmt.close();
-                }
-
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        } else if ("min".equals(command)) {
-            try {
-                try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-                    Statement stmt = c.createStatement();
-                    ResultSet rs = stmt.executeQuery("SELECT * FROM PRODUCT ORDER BY PRICE LIMIT 1");
-                    response.getWriter().println("<html><body>");
-                    response.getWriter().println("<h1>Product with min price: </h1>");
-
-                    while (rs.next()) {
-                        String  name = rs.getString("name");
-                        int price  = rs.getInt("price");
-                        response.getWriter().println(name + "\t" + price + "</br>");
-                    }
-                    response.getWriter().println("</body></html>");
-
-                    rs.close();
-                    stmt.close();
-                }
-
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        } else if ("sum".equals(command)) {
-            try {
-                try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-                    Statement stmt = c.createStatement();
-                    ResultSet rs = stmt.executeQuery("SELECT SUM(price) FROM PRODUCT");
-                    response.getWriter().println("<html><body>");
-                    response.getWriter().println("Summary price: ");
-
-                    if (rs.next()) {
-                        response.getWriter().println(rs.getInt(1));
-                    }
-                    response.getWriter().println("</body></html>");
-
-                    rs.close();
-                    stmt.close();
-                }
-
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        } else if ("count".equals(command)) {
-            try {
-                try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-                    Statement stmt = c.createStatement();
-                    ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM PRODUCT");
-                    response.getWriter().println("<html><body>");
-                    response.getWriter().println("Number of products: ");
-
-                    if (rs.next()) {
-                        response.getWriter().println(rs.getInt(1));
-                    }
-                    response.getWriter().println("</body></html>");
-
-                    rs.close();
-                    stmt.close();
-                }
-
+                functions.get(command).accept(command);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
