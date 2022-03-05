@@ -53,7 +53,8 @@ public class Test {
         return response;
     }
 
-    Optional<Long> parseValuePage(String page) {
+    Optional<Long> parseValuePage(String header, String page) {
+        assertTrue(page.contains(header));
         Pattern p = Pattern.compile("([0-9]+)");
         Matcher m = p.matcher(page);
         if (m.find()) {
@@ -93,7 +94,8 @@ public class Test {
         }
     }
 
-    List<ProductInfo> parseTablePage(String page) {
+    List<ProductInfo> parseTablePage(String header, String page) {
+        assertTrue(page.contains(header));
         Pattern p = Pattern.compile("([a-zA-Z0-9.]+)\t([0-9]+)</br>");
         Matcher m = p.matcher(page);
         List<ProductInfo> products = new ArrayList<ProductInfo>();
@@ -103,6 +105,13 @@ public class Test {
         }
         return products;
     }
+
+    static final Map<String, String> headers =
+            Map.of(
+                    "count", "Number of products:",
+                    "sum", "Summary price: ",
+                    "min", "<h1>Product with min price: </h1>",
+                    "max", "<h1>Product with max price: </h1>");
 
     AddProductServlet add;
     GetProductsServlet getProducts;
@@ -127,6 +136,23 @@ public class Test {
     }
 
     @org.junit.Test
+    public void emptyDB() throws Exception {
+        assertEquals(parseTablePage("", doGetProduct(getProducts).getContentAsString()), List.of());
+
+        assertTrue(parseTablePage(headers.get("min"),
+                doQuery(query, "min").getContentAsString()).isEmpty());
+
+        assertTrue(parseTablePage(headers.get("max"),
+                doQuery(query, "max").getContentAsString()).isEmpty());
+
+        assertEquals(0, (long)parseValuePage(headers.get("sum"),
+                doQuery(query, "sum").getContentAsString()).get());
+
+        assertEquals(0, (long)parseValuePage(headers.get("count"),
+                doQuery(query, "count").getContentAsString()).get());
+    }
+
+    @org.junit.Test
     public void addDifferentProducts() throws Exception {
         List<ProductInfo> products = List.of(
                 new ProductInfo("p1", 10),
@@ -136,7 +162,7 @@ public class Test {
         for (ProductInfo product : products) {
             doAdd(add, product.name, product.price);
         }
-        assertEquals(parseTablePage(doGetProduct(getProducts).getContentAsString()), products);
+        assertEquals(parseTablePage("", doGetProduct(getProducts).getContentAsString()), products);
     }
 
     @org.junit.Test
@@ -149,7 +175,7 @@ public class Test {
         for (ProductInfo product : products) {
             doAdd(add, product.name, product.price);
         }
-        assertEquals(parseTablePage(doGetProduct(getProducts).getContentAsString()), products);
+        assertEquals(parseTablePage("", doGetProduct(getProducts).getContentAsString()), products);
     }
 
     void checkValue(List<ProductInfo> values, Set<ProductInfo> exp) {
@@ -159,7 +185,7 @@ public class Test {
     }
 
     @org.junit.Test
-    public void queryMax() throws Exception {
+    public void queries() throws Exception {
         List<ProductInfo> products = List.of(
                 new ProductInfo("p1.1", 10),
                 new ProductInfo("p1.2", 10),
@@ -172,26 +198,22 @@ public class Test {
         }
 
         checkValue(
-                parseTablePage(doQuery(query, "max").getContentAsString()),
+                parseTablePage(headers.get("max"), doQuery(query, "max").getContentAsString()),
                 Set.of(
                         new ProductInfo("p3.1", 14),
                         new ProductInfo("p3.2", 14)));
 
         checkValue(
-                parseTablePage(doQuery(query, "min").getContentAsString()),
+                parseTablePage(headers.get("min"), doQuery(query, "min").getContentAsString()),
                 Set.of(
                         new ProductInfo("p1.1", 10),
                         new ProductInfo("p1.2", 10)));
 
-        checkValue(
-                parseTablePage(doQuery(query, "min").getContentAsString()),
-                Set.of(
-                        new ProductInfo("p1.1", 10),
-                        new ProductInfo("p1.2", 10)));
+        assertEquals(60, (long) parseValuePage(headers.get("sum"),
+                doQuery(query, "sum").getContentAsString()).get());
 
-        assertEquals(60, (long) parseValuePage(doQuery(query, "sum").getContentAsString()).get());
-
-        assertEquals(5, (long) parseValuePage(doQuery(query, "count").getContentAsString()).get());
+        assertEquals(5, (long) parseValuePage(headers.get("count"),
+                doQuery(query, "count").getContentAsString()).get());
     }
 }
 
