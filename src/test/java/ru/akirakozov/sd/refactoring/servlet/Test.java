@@ -113,26 +113,22 @@ public class Test {
                     "min", "<h1>Product with min price: </h1>",
                     "max", "<h1>Product with max price: </h1>");
 
+    DataBase db;
     AddProductServlet add;
     GetProductsServlet getProducts;
     QueryServlet query;
 
     @Before
     public void setUp() throws SQLException {
-        add = new AddProductServlet();
-        getProducts = new GetProductsServlet();
-        query = new QueryServlet();
-        try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-            String sql = "CREATE TABLE IF NOT EXISTS PRODUCT" +
-                    "(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                    " NAME           TEXT    NOT NULL, " +
-                    " PRICE          INT     NOT NULL)";
-            Statement stmt = c.createStatement();
-
-            stmt.executeUpdate(sql);
-            stmt.executeUpdate("DELETE FROM PRODUCT");
-            stmt.close();
-        }
+        db = new DataBase("jdbc:sqlite:test.db");
+        add = new AddProductServlet(db);
+        getProducts = new GetProductsServlet(db);
+        query = new QueryServlet(db);
+        db.sqlUpdate("CREATE TABLE IF NOT EXISTS PRODUCT" +
+                "(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                " NAME           TEXT    NOT NULL, " +
+                " PRICE          INT     NOT NULL)");
+        db.sqlUpdate("DELETE FROM PRODUCT");
     }
 
     @org.junit.Test

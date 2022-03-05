@@ -17,18 +17,6 @@ public class Utils {
         R apply(T t) throws IOException, SQLException;
     }
 
-    static void sqlRequest(String request, throwableConsumer<ResultSet> consumer) throws SQLException, IOException {
-        try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-            Statement stmt = c.createStatement();
-            ResultSet rs = stmt.executeQuery(request);
-
-            consumer.accept(rs);
-
-            rs.close();
-            stmt.close();
-        }
-    }
-
     static void htmlTable(ResultSet rs, PrintWriter writer) throws SQLException {
         while (rs.next()) {
             String  name = rs.getString("name");

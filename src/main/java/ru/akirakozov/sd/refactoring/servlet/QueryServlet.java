@@ -19,6 +19,12 @@ import static ru.akirakozov.sd.refactoring.servlet.Utils.*;
  * @author akirakozov
  */
 public class QueryServlet extends HttpServlet {
+    private final DataBase dataBase;
+
+    public QueryServlet(DataBase db) {
+        dataBase = db;
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String command = request.getParameter("command");
@@ -31,7 +37,7 @@ public class QueryServlet extends HttpServlet {
                         writer.println("</body></html>");
                     });
 
-            sqlRequest(
+            dataBase.sqlRequest(
                     String.format("SELECT * FROM PRODUCT ORDER BY PRICE %s LIMIT 1",
                             cmd.equals("max") ? "DESC" : ""),
                     (ResultSet rs) -> Utils.fromTemplate(template, rs, response.getWriter()));
@@ -45,7 +51,7 @@ public class QueryServlet extends HttpServlet {
                 writer.println("</body></html>");
             });
 
-            sqlRequest(
+            dataBase.sqlRequest(
                     "SELECT SUM(price) FROM PRODUCT",
                     (ResultSet rs) -> Utils.fromTemplate(
                             template,
@@ -61,7 +67,7 @@ public class QueryServlet extends HttpServlet {
                 writer.println("</body></html>");
             });
 
-            sqlRequest(
+            dataBase.sqlRequest(
                     "SELECT COUNT(*) FROM PRODUCT",
                     (ResultSet rs) -> {
                         Utils.fromTemplate(

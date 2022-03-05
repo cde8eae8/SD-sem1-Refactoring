@@ -12,6 +12,11 @@ import java.sql.Statement;
  * @author akirakozov
  */
 public class AddProductServlet extends HttpServlet {
+    private final DataBase dataBase;
+
+    public AddProductServlet(DataBase db) {
+        dataBase = db;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -19,13 +24,8 @@ public class AddProductServlet extends HttpServlet {
         long price = Long.parseLong(request.getParameter("price"));
 
         try {
-            try (Connection c = DriverManager.getConnection("jdbc:sqlite:test.db")) {
-                String sql = "INSERT INTO PRODUCT " +
-                        "(NAME, PRICE) VALUES (\"" + name + "\"," + price + ")";
-                Statement stmt = c.createStatement();
-                stmt.executeUpdate(sql);
-                stmt.close();
-            }
+            dataBase.sqlUpdate("INSERT INTO PRODUCT " +
+                    "(NAME, PRICE) VALUES (\"" + name + "\"," + price + ")");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

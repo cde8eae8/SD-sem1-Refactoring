@@ -13,11 +13,16 @@ import static ru.akirakozov.sd.refactoring.servlet.Utils.*;
  * @author akirakozov
  */
 public class GetProductsServlet extends HttpServlet {
+    private final DataBase dataBase;
+
+    public GetProductsServlet(DataBase db) {
+        dataBase = db;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
-            sqlRequest("SELECT * FROM PRODUCT",
+            dataBase.sqlRequest("SELECT * FROM PRODUCT",
                     (ResultSet rs) -> {
                         String template = makeTemplate((PrintWriter writer) -> {
                                     writer.println("<html><body>");
