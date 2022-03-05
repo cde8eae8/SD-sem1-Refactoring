@@ -4,7 +4,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public class Utils {
     @FunctionalInterface
@@ -12,37 +16,18 @@ public class Utils {
         void accept(T t) throws IOException, SQLException;
     }
 
-    @FunctionalInterface
-    public interface throwableFunction<T, R> {
-        R apply(T t) throws IOException, SQLException;
+    static HtmlTree.Element page(Collection<HtmlTree.Element> content) {
+        return new HtmlTree.Html(List.of(new HtmlTree.Body(content)));
     }
 
-    static void htmlTable(ResultSet rs, PrintWriter writer) throws SQLException {
+    static List<HtmlTree.Element> htmlTable(ResultSet rs) throws SQLException {
+        List<HtmlTree.Element> elements = new ArrayList<HtmlTree.Element>();
         while (rs.next()) {
             String  name = rs.getString("name");
             int price  = rs.getInt("price");
-            writer.println(name + "\t" + price + "</br>");
+            elements.add(new HtmlTree.Text(name + "\t" + price));
+            elements.add(new HtmlTree.LineBreak());
         }
-    }
-
-    static void fromTemplate(String template, Optional<Integer> value, PrintWriter writer) throws SQLException {
-        String result = template.replace("%value%", value.map(Long::toString).orElse(""));
-        writer.print(result);
-    }
-
-    static void fromTemplate(String template, ResultSet rs, PrintWriter writer) throws SQLException {
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        htmlTable(rs, pw);
-        String table = sw.toString();
-        String result = template.replace("%table%", table);
-        writer.print(result);
-    }
-
-    static String makeTemplate(throwableConsumer<PrintWriter> consumer) throws SQLException, IOException {
-        StringWriter sw = new StringWriter();
-        PrintWriter writer = new PrintWriter(sw, true);
-        consumer.accept(writer);
-        return sw.toString();
+        return elements;
     }
 }

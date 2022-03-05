@@ -110,8 +110,8 @@ public class Test {
             Map.of(
                     "count", "Number of products:",
                     "sum", "Summary price: ",
-                    "min", "<h1>Product with min price: </h1>",
-                    "max", "<h1>Product with max price: </h1>");
+                    "min", "Product with min price: ",
+                    "max", "Product with max price: ");
 
     DataBase db;
     AddProductServlet add;

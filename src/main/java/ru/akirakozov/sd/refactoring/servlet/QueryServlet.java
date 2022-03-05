@@ -3,15 +3,19 @@ package ru.akirakozov.sd.refactoring.servlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.*;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static ru.akirakozov.sd.refactoring.servlet.Utils.*;
 
@@ -30,50 +34,61 @@ public class QueryServlet extends HttpServlet {
         String command = request.getParameter("command");
 
         throwableConsumer<String> minMax = (String cmd) -> {
-            String template = makeTemplate((PrintWriter writer) -> {
-                        writer.println("<html><body>");
-                        writer.println(String.format("<h1>Product with %s price: </h1>", cmd));
-                        writer.println("%table%");
-                        writer.println("</body></html>");
-                    });
+            Function<List<HtmlTree.Element>, HtmlTree.Element> template =
+                    (List<HtmlTree.Element> elements) ->
+                            Utils.page(Stream.concat(
+                                    Stream.of(
+                                        new HtmlTree.H1(List.of(
+                                            new HtmlTree.Text(String.format("Product with %s price: ", cmd))
+                                        ))),
+                                    elements.stream()).collect(Collectors.toList())
+                            );
 
             dataBase.sqlRequest(
                     String.format("SELECT * FROM PRODUCT ORDER BY PRICE %s LIMIT 1",
                             cmd.equals("max") ? "DESC" : ""),
-                    (ResultSet rs) -> Utils.fromTemplate(template, rs, response.getWriter()));
+                    (ResultSet rs) -> {
+                        HtmlTree.Element page = template.apply(htmlTable(rs));
+                        HtmlPrinter printer = new HtmlPrinter(response.getWriter());
+                        page.accept(printer);
+                    });
         };
 
         throwableConsumer<String> sum = (String cmd) -> {
-            String template = makeTemplate((PrintWriter writer) -> {
-                writer.println("<html><body>");
-                writer.println("Summary price: ");
-                writer.println("%value%");
-                writer.println("</body></html>");
-            });
+            Function<Optional<HtmlTree.Element>, HtmlTree.Element> template =
+                    (Optional<HtmlTree.Element> value) ->
+                            Utils.page(Stream.concat(
+                                Stream.of(new HtmlTree.Text("Summary price: ")),
+                                value.stream())
+                                    .collect(Collectors.toList())
+                            );
 
             dataBase.sqlRequest(
                     "SELECT SUM(price) FROM PRODUCT",
-                    (ResultSet rs) -> Utils.fromTemplate(
-                            template,
-                            rs.next() ? Optional.of(rs.getInt(1)) : Optional.empty(),
-                            response.getWriter()));
+                    (ResultSet rs) -> {
+                        Optional<Integer> value = rs.next() ? Optional.of(rs.getInt(1)) : Optional.empty();
+                        HtmlTree.Element page = template.apply(value.map((v) -> new HtmlTree.Text(Integer.toString(v))));
+                        HtmlPrinter printer = new HtmlPrinter(response.getWriter());
+                        page.accept(printer);
+                    });
         };
 
         throwableConsumer<String> count = (String cmd) -> {
-            String template = makeTemplate((PrintWriter writer) -> {
-                writer.println("<html><body>");
-                writer.println("Number of products: ");
-                writer.println("%value%");
-                writer.println("</body></html>");
-            });
+            Function<Optional<HtmlTree.Element>, HtmlTree.Element> template =
+                    (Optional<HtmlTree.Element> value) ->
+                            Utils.page(Stream.concat(
+                                            Stream.of(new HtmlTree.Text("Number of products: ")),
+                                            value.stream())
+                                    .collect(Collectors.toList())
+                            );
 
             dataBase.sqlRequest(
                     "SELECT COUNT(*) FROM PRODUCT",
                     (ResultSet rs) -> {
-                        Utils.fromTemplate(
-                                template,
-                                rs.next() ? Optional.of(rs.getInt(1)) : Optional.empty(),
-                                response.getWriter());
+                        Optional<Integer> value = rs.next() ? Optional.of(rs.getInt(1)) : Optional.empty();
+                        HtmlTree.Element page = template.apply(value.map((v) -> new HtmlTree.Text(Integer.toString(v))));
+                        HtmlPrinter printer = new HtmlPrinter(response.getWriter());
+                        page.accept(printer);
                     });
         };
 

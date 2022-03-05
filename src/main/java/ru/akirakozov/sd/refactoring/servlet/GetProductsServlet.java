@@ -1,11 +1,16 @@
 package ru.akirakozov.sd.refactoring.servlet;
 
+import org.w3c.dom.html.HTMLElement;
+
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Function;
 
 import static ru.akirakozov.sd.refactoring.servlet.Utils.*;
 
@@ -24,12 +29,11 @@ public class GetProductsServlet extends HttpServlet {
         try {
             dataBase.sqlRequest("SELECT * FROM PRODUCT",
                     (ResultSet rs) -> {
-                        String template = makeTemplate((PrintWriter writer) -> {
-                                    writer.println("<html><body>");
-                                    writer.println("%table%");
-                                    writer.println("</body></html>");
-                                });
-                        Utils.fromTemplate(template, rs, response.getWriter());
+                        Function<List<HtmlTree.Element>, HtmlTree.Element> template =
+                                (List<HtmlTree.Element> el) -> new HtmlTree.Html(List.of(new HtmlTree.Body(el)));
+                        HtmlTree.Element page = template.apply(htmlTable(rs));
+                        HtmlPrinter printer = new HtmlPrinter(response.getWriter());
+                        page.accept(printer);
                     });
         } catch (SQLException e) {
             throw new RuntimeException(e);
